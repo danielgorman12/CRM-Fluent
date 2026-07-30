@@ -4,6 +4,11 @@ import { PrismaClient } from "../lib/generated/prisma/client";
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
+// This seed runs in EVERY environment, including production (it's part of
+// the Vercel build command) — it must only ever contain real, essential
+// lookup data. Fictional demo prospects live in seed-sample-data.ts instead,
+// which is never wired into the build.
+
 // Ordered pipeline — `order` drives both the funnel and the pipeline-progress UI.
 const STAGES = [
   { name: "Identified", order: 1, category: "ACTIVE", colorHex: "#94a3b8" },
@@ -30,80 +35,10 @@ const VERTICALS = [
 ];
 
 // Seeded M&A team — Phase 1 has no self-serve provisioning, so this list is
-// the source of truth for who can sign in. Update here and re-run the seed
-// (or insert directly) to add a new team member.
+// the source of truth for who can sign in, in every environment including
+// production. Add a real team member here and re-run the seed to grant access.
 const TEAM_MEMBERS = [
   { email: "daniel.gorman@fluentcorp.com", name: "Daniel Gorman", title: "Portfolio Controller" },
-];
-
-// A handful of fictional sample prospects for local UI development/testing —
-// lat/lng are hardcoded (rather than geocoded) so the seed stays fast and
-// deterministic offline.
-const SAMPLE_PROSPECTS = [
-  {
-    name: "Meridian Clinic Systems",
-    verticalName: "Healthcare IT",
-    stageName: "Advanced Discussions",
-    city: "Nashville",
-    region: "TN",
-    country: "USA",
-    latitude: 36.1627,
-    longitude: -86.7816,
-    currentARR: 4200000,
-    currentEBITDA: 1100000,
-    currentEBITDAMargin: 26,
-    grossRetentionPct: 92,
-    netRetentionPct: 104,
-    description: "EHR and billing software for independent physical therapy clinics.",
-  },
-  {
-    name: "CivicWorks Permitting",
-    verticalName: "Government & Public Sector",
-    stageName: "Outreach Sent",
-    city: "Boise",
-    region: "ID",
-    country: "USA",
-    latitude: 43.615,
-    longitude: -116.2023,
-    currentARR: 1800000,
-    currentEBITDA: 350000,
-    currentEBITDAMargin: 19,
-    grossRetentionPct: 95,
-    netRetentionPct: 101,
-    description: "Permitting and code-enforcement software for small municipal governments.",
-  },
-  {
-    name: "DockSide Logistics Suite",
-    verticalName: "Transportation & Logistics",
-    stageName: "LOI Submitted",
-    city: "Savannah",
-    region: "GA",
-    country: "USA",
-    latitude: 32.0809,
-    longitude: -81.0912,
-    currentARR: 6100000,
-    currentEBITDA: 2000000,
-    currentEBITDAMargin: 33,
-    grossRetentionPct: 90,
-    netRetentionPct: 108,
-    description: "Yard and dock scheduling software for regional freight terminals.",
-  },
-  {
-    name: "ParishConnect",
-    verticalName: "Nonprofit & Association Management",
-    stageName: "Closed Won",
-    city: "Cincinnati",
-    region: "OH",
-    country: "USA",
-    latitude: 39.1031,
-    longitude: -84.512,
-    currentARR: 2900000,
-    currentEBITDA: 950000,
-    currentEBITDAMargin: 33,
-    grossRetentionPct: 96,
-    netRetentionPct: 103,
-    description: "Membership and donation management software for religious organizations.",
-  },
 ];
 
 async function main() {
@@ -131,50 +66,7 @@ async function main() {
     });
   }
 
-  const existingProspectCount = await prisma.prospect.count();
-  if (existingProspectCount === 0) {
-    const dealOwner = await prisma.user.findUniqueOrThrow({
-      where: { email: TEAM_MEMBERS[0].email },
-    });
-
-    for (const sample of SAMPLE_PROSPECTS) {
-      const [vertical, stage] = await Promise.all([
-        prisma.vertical.findUniqueOrThrow({ where: { name: sample.verticalName } }),
-        prisma.stageDefinition.findUniqueOrThrow({ where: { name: sample.stageName } }),
-      ]);
-
-      await prisma.prospect.create({
-        data: {
-          name: sample.name,
-          description: sample.description,
-          verticalId: vertical.id,
-          city: sample.city,
-          region: sample.region,
-          country: sample.country,
-          latitude: sample.latitude,
-          longitude: sample.longitude,
-          geocodeStatus: "MANUAL",
-          geocodeSource: "manual",
-          geocodedAt: new Date(),
-          currentARR: sample.currentARR,
-          currentEBITDA: sample.currentEBITDA,
-          currentEBITDAMargin: sample.currentEBITDAMargin,
-          grossRetentionPct: sample.grossRetentionPct,
-          netRetentionPct: sample.netRetentionPct,
-          currentStageId: stage.id,
-          dealOwnerId: dealOwner.id,
-          createdById: dealOwner.id,
-          stageHistory: {
-            create: { stageId: stage.id, changedById: dealOwner.id },
-          },
-        },
-      });
-    }
-  }
-
-  console.log(
-    `Seeded ${STAGES.length} stages, ${VERTICALS.length} verticals, ${TEAM_MEMBERS.length} team members, ${existingProspectCount === 0 ? SAMPLE_PROSPECTS.length : 0} sample prospects.`,
-  );
+  console.log(`Seeded ${STAGES.length} stages, ${VERTICALS.length} verticals, ${TEAM_MEMBERS.length} team members.`);
 }
 
 main()
