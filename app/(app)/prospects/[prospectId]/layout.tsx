@@ -20,11 +20,13 @@ export default async function ProspectLayout({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <h1 className="text-xl font-semibold">{prospect.name}</h1>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{prospect.name}</h1>
         <StageBadge name={prospect.currentStage.name} colorHex={prospect.currentStage.colorHex} />
       </div>
-      <ProspectTabsNav prospectId={prospectId} />
+      <div className="border-b">
+        <ProspectTabsNav prospectId={prospectId} />
+      </div>
       <div className="pt-2">{children}</div>
     </div>
   );

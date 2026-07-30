@@ -93,11 +93,11 @@ export function KanbanBoard({ columns }: { columns: BoardColumn[] }) {
               e.preventDefault();
               handleDrop(e, column.stageId);
             }}
-            className={`flex w-56 shrink-0 flex-col rounded-lg border bg-muted/30 transition-colors ${
-              dragOverStageId === column.stageId ? "border-foreground bg-muted" : ""
+            className={`flex w-56 shrink-0 flex-col rounded-xl bg-muted/50 transition-colors ${
+              dragOverStageId === column.stageId ? "ring-2 ring-brand" : ""
             }`}
           >
-            <div className="flex items-center gap-2 border-b px-3 py-2">
+            <div className="flex items-center gap-2 px-3 py-2.5">
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: column.colorHex }}
@@ -120,7 +120,7 @@ export function KanbanBoard({ columns }: { columns: BoardColumn[] }) {
                     setDraggedId(null);
                     setDragOverStageId(null);
                   }}
-                  className={`cursor-grab rounded-md border bg-background p-2.5 shadow-sm active:cursor-grabbing ${
+                  className={`cursor-grab rounded-lg border bg-background p-3 shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing ${
                     draggedId === card.id ? "opacity-40" : ""
                   }`}
                 >

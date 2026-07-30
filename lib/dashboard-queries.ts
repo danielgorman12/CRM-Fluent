@@ -24,9 +24,9 @@ function periodStartDate(period?: string): Date | undefined {
   return date;
 }
 
-export async function getDashboardData(filters: DashboardFilters) {
-  const since = periodStartDate(filters.period);
-
+// KPI counts for one time window. Called twice — current and preceding period —
+// so the cards can show a change figure.
+async function computeKpis(filters: DashboardFilters, since?: Date, until?: Date) {
   const prospectWhere = {
     ...(filters.country ? { country: filters.country } : {}),
     ...(filters.verticalId ? { verticalId: filters.verticalId } : {}),
@@ -40,9 +40,11 @@ export async function getDashboardData(filters: DashboardFilters) {
   });
   let prospectIds = scopedProspects.map((p) => p.id);
 
+  const dateRange = since || until ? { ...(since ? { gte: since } : {}), ...(until ? { lt: until } : {}) } : undefined;
+
   const activityWhere = {
     prospectId: { in: prospectIds },
-    ...(since ? { activityDate: { gte: since } } : {}),
+    ...(dateRange ? { activityDate: dateRange } : {}),
     ...(filters.activityType ? { activityType: filters.activityType as never } : {}),
   };
 
@@ -86,7 +88,7 @@ export async function getDashboardData(filters: DashboardFilters) {
       where: {
         prospectId: { in: prospectIds },
         stageId: { in: stageIdsAtOrAbove },
-        ...(since ? { enteredAt: { gte: since } } : {}),
+        ...(dateRange ? { enteredAt: dateRange } : {}),
       },
       select: { prospectId: true },
       distinct: ["prospectId"],
@@ -106,27 +108,128 @@ export async function getDashboardData(filters: DashboardFilters) {
   const prospectsContacted = contactedProspects.length;
   const responseRate = prospectsContacted > 0 ? (respondedProspects.length / prospectsContacted) * 100 : 0;
 
-  const funnel = [
-    { label: "Outreach", count: prospectsContacted },
-    { label: "Response", count: respondedProspects.length },
-    { label: "Discussions", count: progressingToDiscussions },
-    { label: "LOI Submitted", count: loisSubmitted },
-    { label: "Closed", count: acquisitionsCompleted },
+  return {
+    prospectsContacted,
+    emailsSent,
+    repliesReceived,
+    responseRate,
+    progressingToDiscussions,
+    loisSubmitted,
+    loisAccepted,
+    acquisitionsCompleted,
+    responded: respondedProspects.length,
+  };
+}
+
+export type Kpis = Awaited<ReturnType<typeof computeKpis>>;
+
+export async function getDashboardData(filters: DashboardFilters) {
+  const since = periodStartDate(filters.period);
+
+  // Compare against the equally-long window immediately before this one. With
+  // no period selected there's no bounded range to compare against, so the
+  // cards show no change figure rather than a misleading one.
+  let previousSince: Date | undefined;
+  if (since) {
+    const days = Number(filters.period);
+    previousSince = new Date(since);
+    previousSince.setDate(previousSince.getDate() - days);
+  }
+
+  const [current, previous] = await Promise.all([
+    computeKpis(filters, since),
+    previousSince ? computeKpis(filters, previousSince, since) : Promise.resolve(null),
+  ]);
+
+  // Conversion stages, rendered as bars rather than a funnel.
+  const conversion = [
+    { label: "Outreach", count: current.prospectsContacted },
+    { label: "Response", count: current.responded },
+    { label: "Discussions", count: current.progressingToDiscussions },
+    { label: "LOI", count: current.loisSubmitted },
+    { label: "Closed", count: current.acquisitionsCompleted },
   ];
 
-  return {
-    kpis: {
-      prospectsContacted,
-      emailsSent,
-      repliesReceived,
-      responseRate,
-      progressingToDiscussions,
-      loisSubmitted,
-      loisAccepted,
-      acquisitionsCompleted,
+  return { kpis: current, previous, conversion };
+}
+
+export type ChartPoint = { label: string; outreach: number; responses: number };
+export type SlicePoint = { label: string; value: number; color: string };
+
+// Outreach volume over time, split into total activities vs those that got a
+// reply — the two-series grouped bars on the dashboard.
+export async function getActivityChart(filters: DashboardFilters): Promise<ChartPoint[]> {
+  const since = periodStartDate(filters.period);
+
+  const prospects = await prisma.prospect.findMany({
+    where: {
+      ...(filters.country ? { country: filters.country } : {}),
+      ...(filters.verticalId ? { verticalId: filters.verticalId } : {}),
+      ...(filters.dealOwnerId ? { dealOwnerId: filters.dealOwnerId } : {}),
     },
-    funnel,
-  };
+    select: { id: true },
+  });
+
+  const activities = await prisma.sourcingActivity.findMany({
+    where: {
+      prospectId: { in: prospects.map((p) => p.id) },
+      ...(since ? { activityDate: { gte: since } } : {}),
+      ...(filters.activityType ? { activityType: filters.activityType as never } : {}),
+    },
+    select: { activityDate: true, resultedInResponse: true },
+    orderBy: { activityDate: "asc" },
+  });
+
+  if (activities.length === 0) return [];
+
+  // Bucket by month when the range is long, otherwise by day, so the axis stays
+  // readable whichever period is selected.
+  const spanDays =
+    (activities[activities.length - 1].activityDate.getTime() - activities[0].activityDate.getTime()) /
+    86_400_000;
+  const byMonth = spanDays > 62;
+
+  const buckets = new Map<string, ChartPoint>();
+  for (const activity of activities) {
+    const d = activity.activityDate;
+    const key = byMonth
+      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      : d.toISOString().slice(0, 10);
+    const label = byMonth
+      ? d.toLocaleDateString(undefined, { month: "short", year: "2-digit" })
+      : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+    const bucket = buckets.get(key) ?? { label, outreach: 0, responses: 0 };
+    bucket.outreach += 1;
+    if (activity.resultedInResponse) bucket.responses += 1;
+    buckets.set(key, bucket);
+  }
+
+  return [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, v]) => v);
+}
+
+// Pipeline distribution for the donut. Uses each stage's own colour so the
+// donut, board and map all read the same way.
+export async function getStageDistribution(filters: DashboardFilters): Promise<SlicePoint[]> {
+  const [stages, prospects] = await Promise.all([
+    prisma.stageDefinition.findMany({ orderBy: { order: "asc" } }),
+    prisma.prospect.findMany({
+      where: {
+        ...(filters.country ? { country: filters.country } : {}),
+        ...(filters.verticalId ? { verticalId: filters.verticalId } : {}),
+        ...(filters.dealOwnerId ? { dealOwnerId: filters.dealOwnerId } : {}),
+      },
+      select: { currentStageId: true },
+    }),
+  ]);
+
+  return stages
+    .map((stage) => ({
+      label: stage.name,
+      value: prospects.filter((p) => p.currentStageId === stage.id).length,
+      color: stage.colorHex,
+    }))
+    .filter((slice) => slice.value > 0);
 }
 
 export type BoardCard = {

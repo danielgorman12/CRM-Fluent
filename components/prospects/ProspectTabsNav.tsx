@@ -26,9 +26,9 @@ export function ProspectTabsNav({ prospectId }: { prospectId: string }) {
             key={tab.href}
             href={tab.href}
             className={cn(
-              "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+              "-mb-px border-b-2 px-3 py-2.5 text-sm transition-colors",
               isActive
-                ? "border-foreground text-foreground"
+                ? "border-brand font-semibold text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >

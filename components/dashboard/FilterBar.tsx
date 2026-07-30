@@ -10,6 +10,7 @@ import { PERIOD_OPTIONS } from "@/lib/dashboard-queries";
 import { ACTIVITY_TYPE_OPTIONS } from "@/lib/validations/activity";
 
 type Option = { id: string; name: string };
+type Choice = { value: string; label: string };
 
 export function FilterBar({
   countries,
@@ -24,55 +25,53 @@ export function FilterBar({
   stages: Option[];
   current: Record<string, string | undefined>;
 }) {
+  const asChoices = (options: Option[]): Choice[] =>
+    options.map((o) => ({ value: o.id, label: o.name }));
+
   return (
-    <form method="get" className="flex flex-wrap items-end gap-3 rounded-lg border p-4">
-      <FilterSelect name="period" label="Period" defaultValue={current.period} placeholder="All time">
-        {PERIOD_OPTIONS.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value}>
-            {opt.label}
-          </SelectItem>
-        ))}
-      </FilterSelect>
-
-      <FilterSelect name="country" label="Geography" defaultValue={current.country} placeholder="All countries">
-        {countries.map((c) => (
-          <SelectItem key={c} value={c}>
-            {c}
-          </SelectItem>
-        ))}
-      </FilterSelect>
-
-      <FilterSelect name="verticalId" label="Vertical" defaultValue={current.verticalId} placeholder="All verticals">
-        {verticals.map((v) => (
-          <SelectItem key={v.id} value={v.id}>
-            {v.name}
-          </SelectItem>
-        ))}
-      </FilterSelect>
-
-      <FilterSelect name="dealOwnerId" label="Team member" defaultValue={current.dealOwnerId} placeholder="Everyone">
-        {users.map((u) => (
-          <SelectItem key={u.id} value={u.id}>
-            {u.name}
-          </SelectItem>
-        ))}
-      </FilterSelect>
-
-      <FilterSelect name="activityType" label="Outreach method" defaultValue={current.activityType} placeholder="All methods">
-        {ACTIVITY_TYPE_OPTIONS.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value}>
-            {opt.label}
-          </SelectItem>
-        ))}
-      </FilterSelect>
-
-      <FilterSelect name="stageId" label="Current stage" defaultValue={current.stageId} placeholder="Any stage">
-        {stages.map((s) => (
-          <SelectItem key={s.id} value={s.id}>
-            {s.name}
-          </SelectItem>
-        ))}
-      </FilterSelect>
+    <form method="get" className="flex flex-wrap items-end gap-3 rounded-xl bg-muted/40 p-4">
+      <FilterSelect
+        name="period"
+        label="Period"
+        placeholder="All time"
+        value={current.period}
+        choices={PERIOD_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+      />
+      <FilterSelect
+        name="country"
+        label="Geography"
+        placeholder="All countries"
+        value={current.country}
+        choices={countries.map((c) => ({ value: c, label: c }))}
+      />
+      <FilterSelect
+        name="verticalId"
+        label="Vertical"
+        placeholder="All verticals"
+        value={current.verticalId}
+        choices={asChoices(verticals)}
+      />
+      <FilterSelect
+        name="dealOwnerId"
+        label="Team member"
+        placeholder="Everyone"
+        value={current.dealOwnerId}
+        choices={asChoices(users)}
+      />
+      <FilterSelect
+        name="activityType"
+        label="Outreach method"
+        placeholder="All methods"
+        value={current.activityType}
+        choices={ACTIVITY_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+      />
+      <FilterSelect
+        name="stageId"
+        label="Current stage"
+        placeholder="Any stage"
+        value={current.stageId}
+        choices={asChoices(stages)}
+      />
 
       <Button type="submit" size="sm">
         Apply
@@ -85,24 +84,36 @@ export function FilterBar({
 function FilterSelect({
   name,
   label,
-  defaultValue,
   placeholder,
-  children,
+  value,
+  choices,
 }: {
   name: string;
   label: string;
-  defaultValue?: string;
   placeholder: string;
-  children: React.ReactNode;
+  value?: string;
+  choices: Choice[];
 }) {
+  // Base UI renders the raw value unless given an items map, which showed
+  // "90" instead of "Last 90 days" on the period filter.
+  const items = Object.fromEntries(choices.map((c) => [c.value, c.label]));
+
   return (
-    <div className="w-44 space-y-1.5">
-      <label className="text-xs text-muted-foreground">{label}</label>
-      <Select name={name} defaultValue={defaultValue}>
-        <SelectTrigger className="w-full">
+    <div className="w-40 space-y-1.5">
+      <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </label>
+      <Select name={name} defaultValue={value} items={items}>
+        <SelectTrigger className="w-full bg-background">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
-        <SelectContent>{children}</SelectContent>
+        <SelectContent>
+          {choices.map((choice) => (
+            <SelectItem key={choice.value} value={choice.value}>
+              {choice.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
       </Select>
     </div>
   );

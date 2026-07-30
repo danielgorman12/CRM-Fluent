@@ -42,8 +42,8 @@ export default async function MapPage({
 
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Geographic Sourcing Map</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Geographic Sourcing Map</h1>
         <div className="flex gap-2">
           <Button
             variant={view === "active" ? "default" : "outline"}
@@ -60,7 +60,7 @@ export default async function MapPage({
 
       <StageLegend stages={relevantStages} />
 
-      <div className="min-h-0 flex-1 overflow-hidden rounded-lg border">
+      <div className="min-h-0 flex-1 overflow-hidden rounded-xl border">
         <ProspectMapLoader prospects={mapProspects} />
       </div>
     </div>

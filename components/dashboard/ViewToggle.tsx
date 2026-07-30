@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const VIEWS = [
-  { value: "funnel", label: "Funnel" },
+  { value: "charts", label: "Charts" },
   { value: "board", label: "Board" },
 ] as const;
 

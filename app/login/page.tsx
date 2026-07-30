@@ -4,13 +4,18 @@ import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40">
-      <div className="w-full max-w-sm space-y-6 rounded-lg border bg-background p-8 shadow-sm">
-        <div className="space-y-1 text-center">
-          <h1 className="text-lg font-semibold">CRM-Fluent</h1>
-          <p className="text-sm text-muted-foreground">
-            M&amp;A sourcing and acquisition evaluation
-          </p>
+    <div className="flex min-h-screen items-center justify-center bg-canvas p-6">
+      <div className="w-full max-w-sm space-y-6 rounded-xl border bg-background p-8 shadow-sm">
+        <div className="space-y-3 text-center">
+          <span className="mx-auto grid size-10 place-items-center rounded-full bg-brand text-sm font-bold text-brand-foreground">
+            CF
+          </span>
+          <div className="space-y-1">
+            <h1 className="text-lg font-semibold tracking-tight">CRM-Fluent</h1>
+            <p className="text-sm text-muted-foreground">
+              M&amp;A sourcing and acquisition evaluation
+            </p>
+          </div>
         </div>
 
         {ssoConfigured && (

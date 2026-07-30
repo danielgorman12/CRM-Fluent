@@ -19,8 +19,13 @@ export default async function ProspectsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Prospects</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Prospects</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {prospects.length} acquisition {prospects.length === 1 ? "target" : "targets"} tracked.
+          </p>
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" render={<a href="/api/export/prospects">Export CSV</a>} />
           <Button render={<Link href="/prospects/new">New prospect</Link>} />
@@ -36,8 +41,8 @@ export default async function ProspectsPage() {
           .
         </p>
       ) : (
-        <Table>
-          <TableHeader>
+        <Table className="overflow-hidden rounded-xl border">
+          <TableHeader className="bg-muted/40">
             <TableRow>
               <TableHead>Company</TableHead>
               <TableHead>Vertical</TableHead>
