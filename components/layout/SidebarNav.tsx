@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Globe, Briefcase } from "lucide-react";
+import { LayoutDashboard, Globe, Briefcase, Route } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/prospects", label: "Prospects", icon: Briefcase },
   { href: "/map", label: "Map", icon: Globe },
+  { href: "/trips", label: "Trip planner", icon: Route },
 ];
 
 export function SidebarNav() {
