@@ -11,5 +11,12 @@ export default defineConfig({
   },
   datasource: {
     url: process.env["DATABASE_URL"],
+    // `prisma dev` serves the app database as `template1`, and Postgres copies
+    // template1 into every newly created database — so the shadow database
+    // Prisma creates for `migrate dev` inherits our schema and the init
+    // migration fails with "type already exists". Pointing the shadow at an
+    // existing database avoids that. Local development only; `migrate deploy`
+    // on Vercel doesn't use a shadow database.
+    shadowDatabaseUrl: process.env["SHADOW_DATABASE_URL"],
   },
 });

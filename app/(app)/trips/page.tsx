@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { planTrip, type TripUnit } from "@/lib/trip-planner";
+import { formatTripDate, planTrip, type TripUnit } from "@/lib/trip-planner";
 import { TripForm } from "@/components/trips/TripForm";
 import { ItineraryDay } from "@/components/trips/ItineraryDay";
 import { TripMapLoader } from "@/components/trips/TripMapLoader";
+import { SaveTripForm } from "@/components/trips/SaveTripForm";
 import type { TripMapStop } from "@/components/trips/TripMap";
 
 const FAILURE_MESSAGES = {
@@ -25,8 +27,13 @@ export default async function TripsPage({
   const radius = Number(str("radius") ?? 250);
   const perDay = Number(str("perDay") ?? 3);
 
-  const [users, plan] = await Promise.all([
+  const [users, savedTrips, plan] = await Promise.all([
     prisma.user.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
+    prisma.trip.findMany({
+      include: { createdBy: true, _count: { select: { visits: true } } },
+      orderBy: { startDate: "desc" },
+      take: 10,
+    }),
     destination
       ? planTrip({
           destination,
@@ -94,24 +101,40 @@ export default async function TripsPage({
 
       {plan?.ok === true && (
         <div className="space-y-5">
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-            <span className="text-muted-foreground">
-              Prospects in range{" "}
-              <span className="font-semibold text-foreground">{plan.considered}</span>
-            </span>
-            <span className="text-muted-foreground">
-              Scheduled <span className="font-semibold text-foreground">{totalStops}</span>
-            </span>
-            <span className="text-muted-foreground">
-              Across{" "}
-              <span className="font-semibold text-foreground">{plan.days.length}</span>{" "}
-              {plan.days.length === 1 ? "day" : "days"}
-            </span>
-            {plan.excluded > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
               <span className="text-muted-foreground">
-                Closed deals skipped{" "}
-                <span className="font-semibold text-foreground">{plan.excluded}</span>
+                Prospects in range{" "}
+                <span className="font-semibold text-foreground">{plan.considered}</span>
               </span>
+              <span className="text-muted-foreground">
+                Scheduled <span className="font-semibold text-foreground">{totalStops}</span>
+              </span>
+              <span className="text-muted-foreground">
+                Across <span className="font-semibold text-foreground">{plan.days.length}</span>{" "}
+                {plan.days.length === 1 ? "day" : "days"}
+              </span>
+              {plan.excluded > 0 && (
+                <span className="text-muted-foreground">
+                  Closed deals skipped{" "}
+                  <span className="font-semibold text-foreground">{plan.excluded}</span>
+                </span>
+              )}
+            </div>
+
+            {totalStops > 0 && (
+              <SaveTripForm
+                params={{
+                  destination,
+                  startDate: str("startDate"),
+                  endDate: str("endDate"),
+                  radius: String(radius),
+                  unit,
+                  perDay: String(perDay),
+                  dealOwnerId: str("dealOwnerId"),
+                }}
+                suggestedName={`${destination} · ${str("startDate") ?? ""}`}
+              />
             )}
           </div>
 
@@ -141,6 +164,33 @@ export default async function TripsPage({
             </div>
           )}
         </div>
+      )}
+
+      {savedTrips.length > 0 && (
+        <section className="border-t pt-6">
+          <h2 className="text-sm font-semibold">Saved trips</h2>
+          <ul className="mt-3 divide-y rounded-xl border">
+            {savedTrips.map((trip) => (
+              <li key={trip.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
+                <Link
+                  href={`/trips/${trip.id}`}
+                  className="text-sm font-medium hover:underline"
+                >
+                  {trip.name}
+                </Link>
+                <span className="text-xs text-muted-foreground">
+                  {formatTripDate(trip.startDate)} – {formatTripDate(trip.endDate)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {trip._count.visits} {trip._count.visits === 1 ? "visit" : "visits"}
+                </span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {trip.createdBy.name}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );

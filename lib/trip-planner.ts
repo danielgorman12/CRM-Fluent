@@ -73,14 +73,30 @@ function haversine(
   return 2 * EARTH_RADIUS[unit] * Math.asin(Math.sqrt(h));
 }
 
+// Trip dates are calendar dates, not instants. They're parsed, stored and
+// formatted as UTC midnight throughout — formatting a UTC midnight in local
+// time renders the previous day for anyone west of UTC.
+export const TRIP_DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  timeZone: "UTC",
+};
+
+export function formatTripDate(date: Date, options: Intl.DateTimeFormatOptions = {}) {
+  return date.toLocaleDateString(undefined, { timeZone: "UTC", ...options });
+}
+
 function datesBetween(startDate: string, endDate: string): Date[] {
-  const start = new Date(`${startDate}T00:00:00`);
-  const end = new Date(`${endDate}T00:00:00`);
+  // Midday UTC, matching how saved trips are stored — see toDate in
+  // actions/trip-actions.ts.
+  const start = new Date(`${startDate}T12:00:00.000Z`);
+  const end = new Date(`${endDate}T12:00:00.000Z`);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return [];
 
   const days: Date[] = [];
   // Cap the trip length so a mistyped year can't generate thousands of days.
-  for (let d = new Date(start); d <= end && days.length < 21; d.setDate(d.getDate() + 1)) {
+  for (let d = new Date(start); d <= end && days.length < 21; d.setUTCDate(d.getUTCDate() + 1)) {
     days.push(new Date(d));
   }
   return days;
@@ -189,11 +205,7 @@ export async function planTrip(request: TripRequest): Promise<TripPlan> {
 
     tripDays.push({
       date: date.toISOString().slice(0, 10),
-      label: date.toLocaleDateString(undefined, {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-      }),
+      label: date.toLocaleDateString(undefined, TRIP_DATE_FORMAT),
       stops,
       spread,
     });
