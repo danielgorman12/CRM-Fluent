@@ -2,8 +2,12 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../lib/generated/prisma/client";
 
-// Local/dev convenience only — NOT wired into `prisma db seed` or the Vercel
-// build, so it can never run against production by accident. Run manually:
+// Fictional prospects for local development and demo deployments, so the map,
+// dashboard funnel, and prospect list have something to show.
+//
+// Runs automatically in local dev. On a deployed environment it only runs when
+// SEED_DEMO_DATA=true is set explicitly — so fake companies can't land in a
+// real production database by accident. Run manually with:
 //   npx tsx prisma/seed-sample-data.ts
 // Requires prisma/seed.ts to have already run (stages/verticals/team members).
 
@@ -78,8 +82,10 @@ const SAMPLE_PROSPECTS = [
 ];
 
 async function main() {
-  if (process.env.VERCEL || process.env.NODE_ENV === "production") {
-    throw new Error("Refusing to seed fictional sample data outside of local development.");
+  const isDeployed = Boolean(process.env.VERCEL) || process.env.NODE_ENV === "production";
+  if (isDeployed && process.env.SEED_DEMO_DATA !== "true") {
+    console.log("Skipping demo prospects (set SEED_DEMO_DATA=true to include them).");
+    return;
   }
 
   const dealOwner = await prisma.user.findFirstOrThrow();

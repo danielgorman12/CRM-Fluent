@@ -58,14 +58,19 @@ Phase 1 has no self-serve provisioning — only users seeded in `prisma/seed.ts`
 
 Deploys to Vercel from the repo root (no Root Directory override needed).
 
-Required environment variables in the Vercel project:
+Environment variables in the Vercel project:
 
-| Variable | Notes |
-|---|---|
-| `DATABASE_URL` | Postgres connection string. Use the **pooled** URL — serverless functions open a connection per invocation, and the unpooled URL will exhaust the connection limit. Vercel's Neon integration (Storage → Connect Database) sets this automatically. |
-| `AUTH_SECRET` | Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
-| `AUTH_MICROSOFT_ENTRA_ID_ID` | Application (client) ID |
-| `AUTH_MICROSOFT_ENTRA_ID_SECRET` | Client secret value |
-| `AUTH_MICROSOFT_ENTRA_ID_ISSUER` | `https://login.microsoftonline.com/<tenant-id>/v2.0/` |
+| Variable | Required | Notes |
+|---|---|---|
+| `DATABASE_URL` | Yes | Postgres connection string. Use the **pooled** URL — the unpooled one will exhaust the connection limit. Vercel's Neon integration (Storage → Connect Database) sets this automatically. |
+| `AUTH_SECRET` | Yes | Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
+| `AUTH_MICROSOFT_ENTRA_ID_ID` | For SSO | Application (client) ID |
+| `AUTH_MICROSOFT_ENTRA_ID_SECRET` | For SSO | Client secret value |
+| `AUTH_MICROSOFT_ENTRA_ID_ISSUER` | For SSO | `https://login.microsoftonline.com/<tenant-id>/v2.0/` |
+| `ENABLE_DEMO_LOGIN` | No | `true` adds a passwordless "Continue as demo user" button. **Anyone with the URL can then sign in** — demo/hackathon use only. |
+| `DEMO_USER_EMAIL` | No | Which seeded team member the demo button signs in as. Defaults to the first entry in `prisma/seed.ts`. |
+| `SEED_DEMO_DATA` | No | `true` seeds the fictional demo prospects and outreach history on deploy, so the map and dashboard aren't empty. Leave unset for real use. |
 
-`npm run build` runs `prisma generate && prisma migrate deploy && prisma db seed` before building, so each deploy applies any pending schema migrations and ensures the stage/vertical/team-member lookup data exists. Both steps are idempotent and safe to re-run. Fictional demo prospects are deliberately excluded from this path (see `prisma/seed-sample-data.ts`).
+At least one sign-in method must be configured. The three `AUTH_MICROSOFT_ENTRA_ID_*` values are only registered as a provider when **all three** are present — a partially-configured provider would otherwise fail Auth.js validation at startup and break sign-in entirely, including the demo button. If neither method is configured, the login page says so explicitly rather than failing silently.
+
+`npm run build` runs `prisma generate && prisma migrate deploy && prisma db seed && tsx prisma/seed-sample-data.ts` before building, so each deploy applies pending migrations and ensures the stage/vertical/team-member lookup data exists. Every step is idempotent. The demo-prospect step no-ops unless `SEED_DEMO_DATA=true`, so fictional companies can't reach a real database.
