@@ -1,10 +1,8 @@
 import { signIn } from "@/lib/auth";
-import { demoLoginEnabled, entraLoginEnabled } from "@/lib/auth.config";
+import { demoMode, ssoConfigured } from "@/lib/demo-mode";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
-  const noProviders = !entraLoginEnabled && !demoLoginEnabled;
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40">
       <div className="w-full max-w-sm space-y-6 rounded-lg border bg-background p-8 shadow-sm">
@@ -15,7 +13,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {entraLoginEnabled && (
+        {ssoConfigured && (
           <form
             action={async () => {
               "use server";
@@ -28,7 +26,7 @@ export default function LoginPage() {
           </form>
         )}
 
-        {entraLoginEnabled && demoLoginEnabled && (
+        {ssoConfigured && demoMode && (
           <div className="flex items-center gap-3">
             <span className="h-px flex-1 bg-border" />
             <span className="text-xs text-muted-foreground">or</span>
@@ -36,7 +34,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {demoLoginEnabled && (
+        {demoMode && (
           <>
             <form
               action={async () => {
@@ -46,26 +44,17 @@ export default function LoginPage() {
             >
               <Button
                 type="submit"
-                variant={entraLoginEnabled ? "outline" : "default"}
+                variant={ssoConfigured ? "outline" : "default"}
                 className="w-full"
               >
-                Continue as demo user
+                Enter demo
               </Button>
             </form>
             <p className="text-center text-xs text-muted-foreground">
-              Demo access is enabled on this deployment — anyone with this link can sign in.
+              Demo mode — no sign-in required, and anyone with this link can enter.
+              Add Microsoft SSO credentials to turn this off.
             </p>
           </>
-        )}
-
-        {noProviders && (
-          <div className="space-y-2 rounded-md border border-dashed p-4 text-center">
-            <p className="text-sm font-medium">No sign-in method configured</p>
-            <p className="text-xs text-muted-foreground">
-              Set the <code>AUTH_MICROSOFT_ENTRA_ID_*</code> variables for Microsoft SSO, or{" "}
-              <code>ENABLE_DEMO_LOGIN=true</code> for demo access.
-            </p>
-          </div>
         )}
       </div>
     </div>

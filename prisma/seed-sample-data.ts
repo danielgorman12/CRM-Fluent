@@ -1,13 +1,14 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../lib/generated/prisma/client";
+import { seedDemoData } from "../lib/demo-mode";
 
-// Fictional prospects for local development and demo deployments, so the map,
-// dashboard funnel, and prospect list have something to show.
+// Fictional prospects for demo deployments, so the map, dashboard funnel, and
+// prospect list have something to show.
 //
-// Runs automatically in local dev. On a deployed environment it only runs when
-// SEED_DEMO_DATA=true is set explicitly — so fake companies can't land in a
-// real production database by accident. Run manually with:
+// Gated on `seedDemoData` (see lib/demo-mode.ts): follows demo mode, which is
+// on until real SSO credentials are configured. So fake companies can't land in
+// a database that's behind real authentication. Run manually with:
 //   npx tsx prisma/seed-sample-data.ts
 // Requires prisma/seed.ts to have already run (stages/verticals/team members).
 
@@ -82,9 +83,8 @@ const SAMPLE_PROSPECTS = [
 ];
 
 async function main() {
-  const isDeployed = Boolean(process.env.VERCEL) || process.env.NODE_ENV === "production";
-  if (isDeployed && process.env.SEED_DEMO_DATA !== "true") {
-    console.log("Skipping demo prospects (set SEED_DEMO_DATA=true to include them).");
+  if (!seedDemoData) {
+    console.log("Skipping demo prospects (real SSO is configured; set SEED_DEMO_DATA=true to force).");
     return;
   }
 

@@ -58,19 +58,27 @@ Phase 1 has no self-serve provisioning — only users seeded in `prisma/seed.ts`
 
 Deploys to Vercel from the repo root (no Root Directory override needed).
 
-Environment variables in the Vercel project:
+**`DATABASE_URL` is the only variable you must set** — Vercel's Neon integration (Storage → Connect Database) sets it for you. Use the **pooled** connection string; the unpooled one will exhaust the connection limit.
 
-| Variable | Required | Notes |
-|---|---|---|
-| `DATABASE_URL` | Yes | Postgres connection string. Use the **pooled** URL — the unpooled one will exhaust the connection limit. Vercel's Neon integration (Storage → Connect Database) sets this automatically. |
-| `AUTH_SECRET` | Yes | Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
-| `AUTH_MICROSOFT_ENTRA_ID_ID` | For SSO | Application (client) ID |
-| `AUTH_MICROSOFT_ENTRA_ID_SECRET` | For SSO | Client secret value |
-| `AUTH_MICROSOFT_ENTRA_ID_ISSUER` | For SSO | `https://login.microsoftonline.com/<tenant-id>/v2.0/` |
-| `ENABLE_DEMO_LOGIN` | No | `true` adds a passwordless "Continue as demo user" button. **Anyone with the URL can then sign in** — demo/hackathon use only. |
-| `DEMO_USER_EMAIL` | No | Which seeded team member the demo button signs in as. Defaults to the first entry in `prisma/seed.ts`. |
-| `SEED_DEMO_DATA` | No | `true` seeds the fictional demo prospects and outreach history on deploy, so the map and dashboard aren't empty. Leave unset for real use. |
+With nothing else configured the app comes up in **demo mode**: a passwordless "Enter demo" button, and fictional prospects seeded so the map and dashboard aren't empty.
 
-At least one sign-in method must be configured. The three `AUTH_MICROSOFT_ENTRA_ID_*` values are only registered as a provider when **all three** are present — a partially-configured provider would otherwise fail Auth.js validation at startup and break sign-in entirely, including the demo button. If neither method is configured, the login page says so explicitly rather than failing silently.
+> ⚠️ Demo mode means **anyone with the URL can enter**. It's for hackathons and demos, not real data. Adding the three `AUTH_MICROSOFT_ENTRA_ID_*` variables switches it off automatically.
 
-`npm run build` runs `prisma generate && prisma migrate deploy && prisma db seed && tsx prisma/seed-sample-data.ts` before building, so each deploy applies pending migrations and ensures the stage/vertical/team-member lookup data exists. Every step is idempotent. The demo-prospect step no-ops unless `SEED_DEMO_DATA=true`, so fictional companies can't reach a real database.
+| Variable | Notes |
+|---|---|
+| `DATABASE_URL` | Required. Pooled Postgres connection string. |
+| `AUTH_SECRET` | Signs session cookies. Required for real use; in demo mode one is derived from `DATABASE_URL` so a missing value doesn't break the demo. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
+| `AUTH_MICROSOFT_ENTRA_ID_ID` | Application (client) ID. |
+| `AUTH_MICROSOFT_ENTRA_ID_SECRET` | Client secret value. |
+| `AUTH_MICROSOFT_ENTRA_ID_ISSUER` | `https://login.microsoftonline.com/<tenant-id>/v2.0/` |
+| `ENABLE_DEMO_LOGIN` | `true`/`false` to force demo login on or off, overriding the default. |
+| `DEMO_USER_EMAIL` | Which seeded team member the demo button signs in as. Defaults to the first entry in `prisma/seed.ts`. |
+| `SEED_DEMO_DATA` | `true`/`false` to force demo prospects on or off, overriding the default. |
+
+Entra ID is only registered as a provider when **all three** of its values are present. A partially-configured provider fails Auth.js validation at startup and breaks sign-in entirely — including the demo button — so it's all-or-nothing by design.
+
+Even in demo mode, sign-in still requires the resolved email to match an active user seeded in `prisma/seed.ts`. Demo mode removes the password, not the allow-list.
+
+`npm run build` runs `prisma generate && prisma migrate deploy && prisma db seed && tsx prisma/seed-sample-data.ts` before building, so each deploy applies pending migrations and ensures the lookup data exists. Every step is idempotent, and the demo-prospect step no-ops when demo mode is off.
+
+Note that this means **the build needs a reachable database**. A missing or wrong `DATABASE_URL` fails the build rather than deploying a site whose every page errors.
