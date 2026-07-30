@@ -15,6 +15,49 @@ import { seedDemoData } from "../lib/demo-mode";
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
+// Scorecard, forecast and valuation figures per demo prospect, so the screening
+// table has something to sort on across every metric group. Deliberately varied
+// — each company leads on a different metric, which makes re-sorting visibly
+// change the ranking.
+const SAMPLE_ANALYSIS: Record<
+  string,
+  {
+    scores: [number, number, number, number, number, number, number, number];
+    forecast: { growth: number; arr: number; ebitda: number; margin: number; upside: number };
+    valuation: {
+      low: number;
+      high: number;
+      revLow: number;
+      revHigh: number;
+      ebLow: number;
+      ebHigh: number;
+      price: number;
+      roce: number;
+    };
+  }
+> = {
+  "Meridian Clinic Systems": {
+    scores: [8, 9, 8, 7, 8, 5, 6, 7],
+    forecast: { growth: 12, arr: 5_200_000, ebitda: 1_600_000, margin: 31, upside: 5 },
+    valuation: { low: 12_000_000, high: 15_000_000, revLow: 2.9, revHigh: 3.6, ebLow: 10.9, ebHigh: 13.6, price: 13_500_000, roce: 13 },
+  },
+  "CivicWorks Permitting": {
+    scores: [6, 9, 9, 6, 9, 4, 7, 6],
+    forecast: { growth: 8, arr: 2_100_000, ebitda: 550_000, margin: 26, upside: 7 },
+    valuation: { low: 4_500_000, high: 5_500_000, revLow: 2.5, revHigh: 3.1, ebLow: 12.9, ebHigh: 15.7, price: 5_000_000, roce: 11 },
+  },
+  "DockSide Logistics Suite": {
+    scores: [9, 7, 7, 8, 7, 8, 5, 8],
+    forecast: { growth: 15, arr: 7_500_000, ebitda: 2_700_000, margin: 36, upside: 3 },
+    valuation: { low: 18_000_000, high: 22_000_000, revLow: 3.0, revHigh: 3.6, ebLow: 9.0, ebHigh: 11.0, price: 20_000_000, roce: 18 },
+  },
+  ParishConnect: {
+    scores: [7, 10, 9, 7, 6, 9, 8, 7],
+    forecast: { growth: 6, arr: 3_200_000, ebitda: 1_120_000, margin: 35, upside: 2 },
+    valuation: { low: 9_000_000, high: 11_000_000, revLow: 3.1, revHigh: 3.8, ebLow: 9.5, ebHigh: 11.6, price: 10_000_000, roce: 16 },
+  },
+};
+
 const SAMPLE_PROSPECTS = [
   {
     name: "Meridian Clinic Systems",
@@ -99,6 +142,10 @@ async function main() {
       prisma.stageDefinition.findUniqueOrThrow({ where: { name: sample.stageName } }),
     ]);
 
+    const analysis = SAMPLE_ANALYSIS[sample.name];
+    const [fin, ret, rec, fit, vert, seller, risk, returns] = analysis.scores;
+    const overall = Math.round((analysis.scores.reduce((a, b) => a + b, 0) / 8) * 10) / 10;
+
     await prisma.prospect.create({
       data: {
         name: sample.name,
@@ -122,6 +169,44 @@ async function main() {
         createdById: dealOwner.id,
         stageHistory: {
           create: { stageId: stage.id, changedById: dealOwner.id },
+        },
+        scorecard: {
+          create: {
+            financialAttractivenessScore: fin,
+            customerRetentionScore: ret,
+            recurringRevenueQualityScore: rec,
+            strategicFitScore: fit,
+            verticalAttractivenessScore: vert,
+            sellerWillingnessScore: seller,
+            keyRisksScore: risk,
+            valuationReturnsScore: returns,
+            overallScore: overall,
+            scoredById: dealOwner.id,
+          },
+        },
+        forecast: {
+          create: {
+            forecastedRevenueGrowthPct: analysis.forecast.growth,
+            forecastedARR: analysis.forecast.arr,
+            forecastedEBITDA: analysis.forecast.ebitda,
+            forecastedEBITDAMargin: analysis.forecast.margin,
+            marginImprovementPts: analysis.forecast.upside,
+            horizonYears: 3,
+            createdById: dealOwner.id,
+          },
+        },
+        valuation: {
+          create: {
+            indicativePriceRangeLow: analysis.valuation.low,
+            indicativePriceRangeHigh: analysis.valuation.high,
+            revenueMultipleLow: analysis.valuation.revLow,
+            revenueMultipleHigh: analysis.valuation.revHigh,
+            ebitdaMultipleLow: analysis.valuation.ebLow,
+            ebitdaMultipleHigh: analysis.valuation.ebHigh,
+            forecastedPurchasePrice: analysis.valuation.price,
+            expectedROCE: analysis.valuation.roce,
+            updatedById: dealOwner.id,
+          },
         },
       },
     });
