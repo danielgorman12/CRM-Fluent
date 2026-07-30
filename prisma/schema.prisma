@@ -1,0 +1,348 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- Lookups -----------------------------------------------------------
+
+model User {
+  id       String  @id @default(cuid())
+  email    String  @unique
+  name     String
+  title    String?
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  dealsOwned         Prospect[]             @relation("DealOwner")
+  createdProspects   Prospect[]             @relation("CreatedBy")
+  stageChanges       ProspectStageHistory[]
+  scorecardsScored   Scorecard[]
+  thesesUpdated      AcquisitionThesis[]
+  sellerInfoReviewed SellerRelationship[]
+  forecastsCreated   ProspectForecast[]
+  valuationsUpdated  ValuationAnalysis[]
+  activitiesLogged   SourcingActivity[]
+}
+
+model Vertical {
+  id   String @id @default(cuid())
+  name String @unique
+
+  prospects Prospect[]
+}
+
+enum StageCategory {
+  ACTIVE
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+model StageDefinition {
+  id         String        @id @default(cuid())
+  name       String        @unique
+  order      Int
+  category   StageCategory
+  colorHex   String
+  isTerminal Boolean       @default(false)
+
+  prospects     Prospect[]
+  stageHistory  ProspectStageHistory[]
+}
+
+// --- Core ----------------------------------------------------------------
+
+enum GeocodeStatus {
+  PENDING
+  GEOCODED
+  MANUAL
+  FAILED
+}
+
+model Prospect {
+  id          String  @id @default(cuid())
+  name        String
+  website     String?
+  description String?
+
+  verticalId String?
+  vertical   Vertical? @relation(fields: [verticalId], references: [id])
+
+  country String?
+  region  String?
+  city    String?
+
+  latitude      Float?
+  longitude     Float?
+  geocodeStatus GeocodeStatus @default(PENDING)
+  geocodeSource String?
+  geocodedAt    DateTime?
+
+  currentARR             Decimal?
+  currentEBITDA          Decimal?
+  currentEBITDAMargin    Decimal?
+  customerRetentionNotes String?
+  grossRetentionPct      Decimal?
+  netRetentionPct        Decimal?
+
+  currentStageId String
+  currentStage   StageDefinition @relation(fields: [currentStageId], references: [id])
+
+  dealOwnerId String
+  dealOwner   User   @relation("DealOwner", fields: [dealOwnerId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stageHistory       ProspectStageHistory[]
+  scorecard          Scorecard?
+  thesis             AcquisitionThesis?
+  sellerRelationship SellerRelationship?
+  forecast           ProspectForecast?
+  valuation          ValuationAnalysis?
+  activities         SourcingActivity[]
+
+  @@index([currentStageId])
+  @@index([verticalId])
+  @@index([dealOwnerId])
+}
+
+model ProspectStageHistory {
+  id String @id @default(cuid())
+
+  prospectId String
+  prospect   Prospect @relation(fields: [prospectId], references: [id])
+
+  stageId String
+  stage   StageDefinition @relation(fields: [stageId], references: [id])
+
+  enteredAt DateTime  @default(now())
+  exitedAt  DateTime?
+
+  changedById String
+  changedBy   User    @relation(fields: [changedById], references: [id])
+  notes       String?
+
+  @@index([prospectId])
+  @@index([stageId])
+}
+
+// --- Scorecard (item 3) ---------------------------------------------------
+
+model Scorecard {
+  id String @id @default(cuid())
+
+  prospectId String   @unique
+  prospect   Prospect @relation(fields: [prospectId], references: [id])
+
+  financialAttractivenessScore Int
+  customerRetentionScore      Int
+  recurringRevenueQualityScore Int
+  strategicFitScore            Int
+  verticalAttractivenessScore  Int
+  sellerWillingnessScore       Int
+  keyRisksScore                Int
+  valuationReturnsScore        Int
+
+  financialAttractivenessNotes String?
+  customerRetentionNotes       String?
+  recurringRevenueQualityNotes String?
+  strategicFitNotes            String?
+  verticalAttractivenessNotes  String?
+  sellerWillingnessNotes       String?
+  keyRisksNotes                String?
+  valuationReturnsNotes        String?
+
+  overallScore        Decimal
+  scoringMethodVersion String @default("v1")
+
+  scoredById String
+  scoredBy   User     @relation(fields: [scoredById], references: [id])
+  scoredAt   DateTime @updatedAt
+}
+
+// --- Acquisition Thesis (item 4) -------------------------------------------
+
+model AcquisitionThesis {
+  id String @id @default(cuid())
+
+  prospectId String   @unique
+  prospect   Prospect @relation(fields: [prospectId], references: [id])
+
+  whyCompanyAttractive  String?
+  whyVerticalAttractive String?
+  synergies             String?
+  keyRisks              String?
+  whyOwnerMightSell      String?
+  whyNow                 String?
+  recommendedNextAction  String?
+
+  updatedById String
+  updatedBy   User     @relation(fields: [updatedById], references: [id])
+  updatedAt   DateTime @updatedAt
+}
+
+// --- Seller & Succession intelligence (items 5 + 6, merged) ---------------
+
+enum SuccessionTimeline {
+  UNDER_1YR
+  ONE_TO_3YR
+  THREE_TO_5YR
+  FIVE_PLUS_YR
+  UNKNOWN
+}
+
+enum SuccessorStatus {
+  NONE
+  FAMILY
+  INTERNAL
+  UNKNOWN
+}
+
+model SellerRelationship {
+  id String @id @default(cuid())
+
+  prospectId String   @unique
+  prospect   Prospect @relation(fields: [prospectId], references: [id])
+
+  ownerName                  String?
+  ownerAge                   Int?
+  yearsOwned                 Int?
+  expectedSuccessionTimeline SuccessionTimeline?
+  successorIdentified        SuccessorStatus?
+  ownershipChangeHistory     String?
+
+  sellerStatedObjectives     String?
+  sellerPriceExpectationLow  Decimal?
+  sellerPriceExpectationHigh Decimal?
+  sellerWillingnessNotes     String?
+  otherSuccessionSignals     String?
+
+  lastReviewedById String?
+  lastReviewedBy   User?     @relation(fields: [lastReviewedById], references: [id])
+  lastReviewedAt   DateTime?
+}
+
+// --- Forecast (item 7) ------------------------------------------------------
+
+model ProspectForecast {
+  id String @id @default(cuid())
+
+  prospectId String   @unique
+  prospect   Prospect @relation(fields: [prospectId], references: [id])
+
+  forecastedRevenueGrowthPct  Decimal?
+  forecastedARR                Decimal?
+  forecastedEBITDA             Decimal?
+  forecastedEBITDAMargin       Decimal?
+  marginImprovementOpportunity String?
+  marginImprovementPts         Decimal?
+  keyAssumptions                String?
+  horizonYears                   Int?
+
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  updatedAt   DateTime @updatedAt
+}
+
+// --- Valuation (item 8) — canonical home for forecastedPurchasePrice/ROCE --
+
+model ValuationAnalysis {
+  id String @id @default(cuid())
+
+  prospectId String   @unique
+  prospect   Prospect @relation(fields: [prospectId], references: [id])
+
+  indicativePriceRangeLow  Decimal?
+  indicativePriceRangeHigh Decimal?
+  revenueMultipleLow       Decimal?
+  revenueMultipleHigh      Decimal?
+  ebitdaMultipleLow        Decimal?
+  ebitdaMultipleHigh       Decimal?
+  forecastedPurchasePrice  Decimal?
+  expectedROCE             Decimal?
+  valuationNotes           String?
+
+  updatedById String
+  updatedBy   User     @relation(fields: [updatedById], references: [id])
+  updatedAt   DateTime @updatedAt
+}
+
+// --- Sourcing activity (item 9) --------------------------------------------
+
+enum ActivityType {
+  EMAIL
+  CALL
+  MEETING
+  OTHER
+}
+
+model SourcingActivity {
+  id String @id @default(cuid())
+
+  prospectId String
+  prospect   Prospect @relation(fields: [prospectId], references: [id])
+
+  activityType ActivityType
+  activityDate DateTime
+
+  contactedById String
+  contactedBy   User   @relation(fields: [contactedById], references: [id])
+
+  contactPersonName  String?
+  resultedInResponse Boolean @default(false)
+  outcomeNotes       String?
+
+  followUpRequired Boolean   @default(false)
+  followUpDate     DateTime?
+  followUpNotes    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([prospectId])
+  @@index([activityDate])
+}
+
+// --- Phase 2 forward-compat: generic data lineage (unused in Phase 1) -----
+
+enum SourceType {
+  MANUAL
+  EXTRACTED
+  CALCULATED
+}
+
+enum ValidationStatus {
+  CONFIRMED
+  NEEDS_REVIEW
+  MISSING
+  CONFLICTING
+  MANUALLY_OVERRIDDEN
+}
+
+model FieldSource {
+  id               String            @id @default(cuid())
+  entityType       String
+  entityId         String
+  fieldName        String
+  sourceType       SourceType
+  sourceDetail     String?
+  reportingPeriod  String?
+  currency         String?
+  confidence       Float?
+  validationStatus ValidationStatus?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([entityType, entityId, fieldName])
+}
