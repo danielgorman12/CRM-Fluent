@@ -129,6 +129,59 @@ export async function getDashboardData(filters: DashboardFilters) {
   };
 }
 
+export type BoardCard = {
+  id: string;
+  name: string;
+  vertical: string | null;
+  location: string | null;
+  arr: number | null;
+  dealOwner: string;
+};
+
+export type BoardColumn = {
+  stageId: string;
+  stageName: string;
+  colorHex: string;
+  cards: BoardCard[];
+};
+
+// Prospects grouped into pipeline columns for the Kanban board. Returns plain
+// serializable values — Prisma's Decimal can't cross into a client component.
+//
+// Applies the prospect-level filters only: the period and outreach-method
+// filters describe activities, and the stage filter would collapse the board to
+// a single column, which defeats the point of a board.
+export async function getPipelineBoard(filters: DashboardFilters): Promise<BoardColumn[]> {
+  const [stages, prospects] = await Promise.all([
+    prisma.stageDefinition.findMany({ orderBy: { order: "asc" } }),
+    prisma.prospect.findMany({
+      where: {
+        ...(filters.country ? { country: filters.country } : {}),
+        ...(filters.verticalId ? { verticalId: filters.verticalId } : {}),
+        ...(filters.dealOwnerId ? { dealOwnerId: filters.dealOwnerId } : {}),
+      },
+      include: { vertical: true, dealOwner: true },
+      orderBy: { updatedAt: "desc" },
+    }),
+  ]);
+
+  return stages.map((stage) => ({
+    stageId: stage.id,
+    stageName: stage.name,
+    colorHex: stage.colorHex,
+    cards: prospects
+      .filter((p) => p.currentStageId === stage.id)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        vertical: p.vertical?.name ?? null,
+        location: [p.city, p.region, p.country].filter(Boolean).join(", ") || null,
+        arr: p.currentARR === null ? null : Number(p.currentARR),
+        dealOwner: p.dealOwner.name,
+      })),
+  }));
+}
+
 export async function getDashboardFilterOptions() {
   const [countries, verticals, users, stages] = await Promise.all([
     prisma.prospect.findMany({

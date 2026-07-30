@@ -1,7 +1,13 @@
-import { getDashboardData, getDashboardFilterOptions } from "@/lib/dashboard-queries";
+import {
+  getDashboardData,
+  getDashboardFilterOptions,
+  getPipelineBoard,
+} from "@/lib/dashboard-queries";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { FunnelChart } from "@/components/dashboard/FunnelChart";
+import { KanbanBoard } from "@/components/dashboard/KanbanBoard";
+import { ViewToggle } from "@/components/dashboard/ViewToggle";
 
 export default async function DashboardPage({
   searchParams,
@@ -9,18 +15,22 @@ export default async function DashboardPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const filters = {
-    period: typeof params.period === "string" ? params.period : undefined,
-    country: typeof params.country === "string" ? params.country : undefined,
-    verticalId: typeof params.verticalId === "string" ? params.verticalId : undefined,
-    dealOwnerId: typeof params.dealOwnerId === "string" ? params.dealOwnerId : undefined,
-    activityType: typeof params.activityType === "string" ? params.activityType : undefined,
-    stageId: typeof params.stageId === "string" ? params.stageId : undefined,
-  };
+  const str = (key: string) => (typeof params[key] === "string" ? (params[key] as string) : undefined);
 
-  const [data, filterOptions] = await Promise.all([
+  const filters = {
+    period: str("period"),
+    country: str("country"),
+    verticalId: str("verticalId"),
+    dealOwnerId: str("dealOwnerId"),
+    activityType: str("activityType"),
+    stageId: str("stageId"),
+  };
+  const view = str("view") === "board" ? "board" : "funnel";
+
+  const [data, filterOptions, board] = await Promise.all([
     getDashboardData(filters),
     getDashboardFilterOptions(),
+    view === "board" ? getPipelineBoard(filters) : Promise.resolve(null),
   ]);
 
   return (
@@ -46,11 +56,21 @@ export default async function DashboardPage({
         <KpiCard label="Acquisitions completed" value={data.kpis.acquisitionsCompleted} />
       </div>
 
-      <div>
-        <h2 className="mb-3 text-sm font-medium text-muted-foreground">
-          Conversion funnel — Outreach → Response → Discussions → LOI → Closed
-        </h2>
-        <FunnelChart data={data.funnel} />
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            {view === "board"
+              ? "Pipeline board — prospects by stage"
+              : "Conversion funnel — Outreach → Response → Discussions → LOI → Closed"}
+          </h2>
+          <ViewToggle current={view} params={filters} />
+        </div>
+
+        {view === "board" && board ? (
+          <KanbanBoard columns={board} />
+        ) : (
+          <FunnelChart data={data.funnel} />
+        )}
       </div>
     </div>
   );
