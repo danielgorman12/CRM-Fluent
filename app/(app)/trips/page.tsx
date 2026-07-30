@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma";
 import { planTrip, type TripUnit } from "@/lib/trip-planner";
 import { TripForm } from "@/components/trips/TripForm";
 import { ItineraryDay } from "@/components/trips/ItineraryDay";
@@ -24,16 +25,20 @@ export default async function TripsPage({
   const radius = Number(str("radius") ?? 250);
   const perDay = Number(str("perDay") ?? 3);
 
-  const plan = destination
-    ? await planTrip({
-        destination,
-        startDate: str("startDate") ?? "",
-        endDate: str("endDate") ?? "",
-        radius: Number.isFinite(radius) ? radius : 250,
-        unit,
-        perDay: Number.isFinite(perDay) ? perDay : 3,
-      })
-    : null;
+  const [users, plan] = await Promise.all([
+    prisma.user.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
+    destination
+      ? planTrip({
+          destination,
+          startDate: str("startDate") ?? "",
+          endDate: str("endDate") ?? "",
+          radius: Number.isFinite(radius) ? radius : 250,
+          unit,
+          perDay: Number.isFinite(perDay) ? perDay : 3,
+          dealOwnerId: str("dealOwnerId"),
+        })
+      : Promise.resolve(null),
+  ]);
 
   const mapStops: TripMapStop[] =
     plan?.ok === true
@@ -63,6 +68,7 @@ export default async function TripsPage({
       </div>
 
       <TripForm
+        users={users}
         current={{
           destination,
           startDate: str("startDate"),
@@ -70,6 +76,7 @@ export default async function TripsPage({
           radius: str("radius"),
           unit: str("unit"),
           perDay: str("perDay"),
+          dealOwnerId: str("dealOwnerId"),
         }}
       />
 

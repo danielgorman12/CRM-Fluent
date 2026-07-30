@@ -16,6 +16,8 @@ export type TripRequest = {
   radius: number;
   unit: TripUnit;
   perDay: number;
+  /** Limit to one team member's deals — usually whoever is travelling. */
+  dealOwnerId?: string;
 };
 
 export type TripStop = {
@@ -36,7 +38,13 @@ export type TripStop = {
   scorecardScore: number | null;
 };
 
-export type TripDay = { date: string; label: string; stops: TripStop[] };
+export type TripDay = {
+  date: string;
+  label: string;
+  stops: TripStop[];
+  /** Furthest apart any two stops are, so an implausible day is visible. */
+  spread: number;
+};
 
 export type TripPlan =
   | { ok: false; reason: "no-destination" | "geocode-failed" | "bad-dates" }
@@ -89,7 +97,11 @@ export async function planTrip(request: TripRequest): Promise<TripPlan> {
   if (!point) return { ok: false, reason: "geocode-failed" };
 
   const prospects = await prisma.prospect.findMany({
-    where: { latitude: { not: null }, longitude: { not: null } },
+    where: {
+      latitude: { not: null },
+      longitude: { not: null },
+      ...(request.dealOwnerId ? { dealOwnerId: request.dealOwnerId } : {}),
+    },
     include: { vertical: true, dealOwner: true, currentStage: true, scorecard: true },
   });
 
@@ -146,20 +158,49 @@ export async function planTrip(request: TripRequest): Promise<TripPlan> {
 
   candidates.sort((a, b) => b.priority - a.priority);
 
-  // Fill days in priority order, then order each day by distance so a day's
-  // visits run outward from the base rather than zig-zagging.
-  const planned = candidates.slice(0, days.length * request.perDay);
-  const tripDays: TripDay[] = days.map((date, i) => ({
-    date: date.toISOString().slice(0, 10),
-    label: date.toLocaleDateString(undefined, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    }),
-    stops: planned
-      .slice(i * request.perDay, (i + 1) * request.perDay)
-      .sort((a, b) => a.distance - b.distance),
-  }));
+  // Build each day around a geographic cluster rather than slicing the priority
+  // list: the highest-priority prospect left anchors the day, then the nearest
+  // remaining prospects to that anchor fill it. Chunking by priority alone put
+  // stops hundreds of miles apart on the same day.
+  const remaining = [...candidates];
+  const tripDays: TripDay[] = [];
+
+  for (const date of days) {
+    const stops: TripStop[] = [];
+    const anchor = remaining.shift();
+
+    if (anchor) {
+      stops.push(anchor);
+      remaining.sort(
+        (a, b) =>
+          haversine(anchor, a, request.unit) - haversine(anchor, b, request.unit),
+      );
+      stops.push(...remaining.splice(0, Math.max(0, request.perDay - 1)));
+      // Visit nearest-to-base first so the day runs outward.
+      stops.sort((a, b) => a.distance - b.distance);
+    }
+
+    let spread = 0;
+    for (const a of stops) {
+      for (const b of stops) {
+        spread = Math.max(spread, haversine(a, b, request.unit));
+      }
+    }
+
+    tripDays.push({
+      date: date.toISOString().slice(0, 10),
+      label: date.toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }),
+      stops,
+      spread,
+    });
+
+    // Restore priority order for the next day's anchor.
+    remaining.sort((a, b) => b.priority - a.priority);
+  }
 
   return {
     ok: true,

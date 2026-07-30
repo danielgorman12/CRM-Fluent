@@ -17,11 +17,19 @@ function FactorBar({ label, value }: { label: string; value: number }) {
 export function ItineraryDay({ day, unit }: { day: TripDay; unit: TripUnit }) {
   return (
     <section className="rounded-xl border">
-      <header className="flex items-center justify-between border-b px-4 py-2.5">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5">
         <h3 className="text-sm font-semibold">{day.label}</h3>
-        <span className="text-xs text-muted-foreground">
-          {day.stops.length} {day.stops.length === 1 ? "visit" : "visits"}
-        </span>
+        <div className="flex items-center gap-2 text-xs">
+          {day.spread > 0 && (
+            <span className={day.spread > 150 ? "text-negative" : "text-muted-foreground"}>
+              {day.spread.toFixed(0)} {unit} apart
+              {day.spread > 150 && " — tight for one day"}
+            </span>
+          )}
+          <span className="text-muted-foreground">
+            {day.stops.length} {day.stops.length === 1 ? "visit" : "visits"}
+          </span>
+        </div>
       </header>
 
       {day.stops.length === 0 ? (

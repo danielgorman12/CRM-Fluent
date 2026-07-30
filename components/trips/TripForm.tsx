@@ -12,7 +12,13 @@ import { RADIUS_OPTIONS, UNIT_OPTIONS } from "@/lib/trip-planner";
 
 const PER_DAY_OPTIONS = [2, 3, 4, 5];
 
-export function TripForm({ current }: { current: Record<string, string | undefined> }) {
+export function TripForm({
+  current,
+  users,
+}: {
+  current: Record<string, string | undefined>;
+  users: Array<{ id: string; name: string }>;
+}) {
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -120,6 +126,28 @@ export function TripForm({ current }: { current: Record<string, string | undefin
               {PER_DAY_OPTIONS.map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   {n}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-40 space-y-1.5">
+          <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Deals owned by
+          </Label>
+          <Select
+            name="dealOwnerId"
+            defaultValue={current.dealOwnerId}
+            items={Object.fromEntries(users.map((u) => [u.id, u.name]))}
+          >
+            <SelectTrigger className="w-full bg-background">
+              <SelectValue placeholder="Anyone" />
+            </SelectTrigger>
+            <SelectContent>
+              {users.map((u) => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.name}
                 </SelectItem>
               ))}
             </SelectContent>
