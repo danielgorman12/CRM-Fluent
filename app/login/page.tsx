@@ -4,14 +4,14 @@ import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-canvas p-6">
-      <div className="w-full max-w-sm space-y-6 rounded-xl border bg-background p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-sidebar p-6">
+      <div className="w-full max-w-sm space-y-6 rounded-2xl bg-background p-8 shadow-lg">
         <div className="space-y-3 text-center">
           <span className="mx-auto grid size-10 place-items-center rounded-full bg-brand text-sm font-bold text-brand-foreground">
             CF
           </span>
           <div className="space-y-1">
-            <h1 className="text-lg font-semibold tracking-tight">CRM-Fluent</h1>
+            <h1 className="text-xl">CRM-Fluent</h1>
             <p className="text-sm text-muted-foreground">
               M&amp;A sourcing and acquisition evaluation
             </p>

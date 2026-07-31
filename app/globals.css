@@ -8,8 +8,8 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-mono: ui-monospace, monospace;
+  --font-heading: var(--font-serif);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -25,6 +25,8 @@
   --color-chart-1: var(--chart-1);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-cream: var(--cream);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --color-canvas: var(--canvas);
@@ -54,53 +56,64 @@
 }
 
 :root {
-  /* Deep navy text, lime-green accent, cool grays. */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.27 0.055 262);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.27 0.055 262);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.27 0.055 262);
-  --primary: oklch(0.27 0.055 262);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.968 0.005 262);
-  --secondary-foreground: oklch(0.27 0.055 262);
-  --muted: oklch(0.968 0.005 262);
-  --muted-foreground: oklch(0.605 0.022 262);
-  --accent: oklch(0.968 0.005 262);
-  --accent-foreground: oklch(0.27 0.055 262);
-  --destructive: oklch(0.63 0.208 26);
-  --border: oklch(0.923 0.008 262);
-  --input: oklch(0.923 0.008 262);
-  --ring: oklch(0.77 0.155 128);
+  /* Palette taken from fluentsoftwaregroup.com: deep navy #121E44, bright blue
+     #1764D7, warm cream #F4F1EA and warm off-white/grey surfaces. Nothing is
+     pure white — the surfaces carry a warm tint, which is what stops the app
+     reading as clinical. */
+  --background: #fcfcfa;
+  --foreground: #121e44;
+  --card: #fcfcfa;
+  --card-foreground: #121e44;
+  --popover: #fcfcfa;
+  --popover-foreground: #121e44;
+  --primary: #121e44;
+  --primary-foreground: #f4f1ea;
+  --secondary: #f4f4f1;
+  --secondary-foreground: #121e44;
+  --muted: #f2f1ec;
+  /* Navy at ~72% over the cream surface, matching their body copy. */
+  --muted-foreground: #545c77;
+  --accent: #eceae3;
+  --accent-foreground: #121e44;
+  --destructive: #c33c2e;
+  --border: #e3e1d9;
+  --input: #e3e1d9;
+  --ring: #1764d7;
   --radius: 0.625rem;
 
-  /* Lime-green brand accent used for active nav and primary actions. */
-  --brand: oklch(0.77 0.155 128);
-  --brand-foreground: oklch(0.27 0.055 262);
+  /* Brand accent: their link/CTA blue. */
+  --brand: #1764d7;
+  --brand-foreground: #ffffff;
+  --brand-soft: #5b9bf0;
+
+  /* Warm cream for text and detail on navy blocks. */
+  --cream: #f4f1ea;
 
   /* Positive/negative deltas on KPI cards. */
-  --positive: oklch(0.65 0.16 145);
-  --negative: oklch(0.63 0.208 26);
+  --positive: #1e7a46;
+  --negative: #c33c2e;
 
-  /* Page canvas behind the white content surface. */
-  --canvas: oklch(0.925 0.003 262);
+  /* Page canvas behind the content surface — warm grey, not neutral. */
+  --canvas: #e9e9e4;
 
-  /* Categorical chart palette: blue primary, green secondary, then accents. */
-  --chart-1: oklch(0.58 0.145 262);
-  --chart-2: oklch(0.66 0.09 148);
-  --chart-3: oklch(0.72 0.16 70);
-  --chart-4: oklch(0.66 0.19 20);
-  --chart-5: oklch(0.62 0.14 305);
+  /* Categorical chart palette: their two blues, then warm accents so a
+     multi-series chart stays on-brand instead of drifting rainbow. */
+  --chart-1: #1764d7;
+  --chart-2: #5b9bf0;
+  --chart-3: #e8a33d;
+  --chart-4: #c4553d;
+  --chart-5: #6b7fd7;
 
-  --sidebar: oklch(0.988 0.003 262);
-  --sidebar-foreground: oklch(0.27 0.055 262);
-  --sidebar-primary: oklch(0.77 0.155 128);
-  --sidebar-primary-foreground: oklch(0.27 0.055 262);
-  --sidebar-accent: oklch(0.962 0.008 262);
-  --sidebar-accent-foreground: oklch(0.27 0.055 262);
-  --sidebar-border: oklch(0.928 0.008 262);
-  --sidebar-ring: oklch(0.77 0.155 128);
+  /* The sidebar is a full-height navy block, echoing the dark sections they
+     use to break up the page. */
+  --sidebar: #121e44;
+  --sidebar-foreground: #f4f1ea;
+  --sidebar-primary: #5b9bf0;
+  --sidebar-primary-foreground: #121e44;
+  --sidebar-accent: #1e2c5a;
+  --sidebar-accent-foreground: #f4f1ea;
+  --sidebar-border: #26325c;
+  --sidebar-ring: #5b9bf0;
 }
 
 .dark {
@@ -151,5 +164,16 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* Page titles use the serif at medium weight with negative tracking, as on
+     fluentsoftwaregroup.com. Scoped to h1 on purpose: most h2s here are 13-14px
+     panel labels, and the serif only reads well above roughly 18px. Add the
+     `font-heading` class for a large section title that should match. */
+  h1 {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    @apply text-balance;
   }
 }

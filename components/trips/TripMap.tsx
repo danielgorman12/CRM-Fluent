@@ -42,13 +42,13 @@ export function TripMap({
       <Circle
         center={[destination.latitude, destination.longitude]}
         radius={radiusMetres}
-        pathOptions={{ color: "#4c7fd4", weight: 1, fillOpacity: 0.05 }}
+        pathOptions={{ color: "#1764d7", weight: 1, fillOpacity: 0.06 }}
       />
 
       <CircleMarker
         center={[destination.latitude, destination.longitude]}
         radius={7}
-        pathOptions={{ color: "#16244c", fillColor: "#16244c", fillOpacity: 1 }}
+        pathOptions={{ color: "#121e44", fillColor: "#121e44", fillOpacity: 1 }}
       >
         <Tooltip permanent direction="top" offset={[0, -8]}>
           {destination.label}

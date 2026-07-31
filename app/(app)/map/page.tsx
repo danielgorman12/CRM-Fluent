@@ -162,8 +162,8 @@ function FilterChip({
       href={href}
       className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
         active
-          ? "border-transparent bg-foreground text-background"
-          : "bg-background text-muted-foreground hover:text-foreground"
+          ? "border-transparent bg-brand text-brand-foreground"
+          : "bg-background text-muted-foreground hover:border-brand/40 hover:text-foreground"
       }`}
     >
       {label}

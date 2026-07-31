@@ -28,15 +28,15 @@ export function SidebarNav() {
             className={cn(
               "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
               active
-                ? "font-semibold text-foreground"
-                : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
+                ? "bg-sidebar-accent font-medium text-cream"
+                : "text-cream/65 hover:bg-sidebar-accent/60 hover:text-cream",
             )}
           >
-            {/* Green rail marks the active section, as in the reference. */}
+            {/* Light-blue rail marks the active section against the navy. */}
             {active && (
-              <span className="absolute -left-4 top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-full bg-brand" />
+              <span className="absolute -left-4 top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-full bg-brand-soft" />
             )}
-            <Icon className={cn("size-4 shrink-0", active && "text-brand")} />
+            <Icon className={cn("size-4 shrink-0", active && "text-brand-soft")} />
             {link.label}
           </Link>
         );

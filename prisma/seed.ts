@@ -9,18 +9,24 @@ const prisma = new PrismaClient({ adapter });
 // lookup data. Fictional demo prospects live in seed-sample-data.ts instead,
 // which is never wired into the build.
 
-// Ordered pipeline — `order` drives both the funnel and the pipeline-progress UI.
+// Ordered pipeline — `order` drives both the funnel and the pipeline-progress
+// UI, and `colorHex` is the single source of truth for stage colour across the
+// map, board and donut.
+//
+// Colours run cool-to-warm on the Fluent brand blues, so progress reads as
+// heat: grey-blue when identified, brand blue mid-pipeline, amber/terracotta as
+// an LOI approaches, green on close. Re-running the seed updates existing rows.
 const STAGES = [
-  { name: "Identified", order: 1, category: "ACTIVE", colorHex: "#94a3b8" },
-  { name: "Outreach Sent", order: 2, category: "ACTIVE", colorHex: "#60a5fa" },
-  { name: "Seller Responded", order: 3, category: "ACTIVE", colorHex: "#38bdf8" },
-  { name: "Initial Discussions", order: 4, category: "ACTIVE", colorHex: "#34d399" },
-  { name: "Advanced Discussions", order: 5, category: "ACTIVE", colorHex: "#facc15" },
-  { name: "Pre-LOI", order: 6, category: "ACTIVE", colorHex: "#fb923c" },
-  { name: "LOI Submitted", order: 7, category: "ACTIVE", colorHex: "#f97316" },
-  { name: "LOI Accepted", order: 8, category: "ACTIVE", colorHex: "#ef4444" },
-  { name: "Closed Won", order: 9, category: "CLOSED_WON", colorHex: "#16a34a", isTerminal: true },
-  { name: "Closed Lost", order: 10, category: "CLOSED_LOST", colorHex: "#71717a", isTerminal: true },
+  { name: "Identified", order: 1, category: "ACTIVE", colorHex: "#9aa3b8" },
+  { name: "Outreach Sent", order: 2, category: "ACTIVE", colorHex: "#8fb6ec" },
+  { name: "Seller Responded", order: 3, category: "ACTIVE", colorHex: "#5b9bf0" },
+  { name: "Initial Discussions", order: 4, category: "ACTIVE", colorHex: "#2f7be0" },
+  { name: "Advanced Discussions", order: 5, category: "ACTIVE", colorHex: "#1764d7" },
+  { name: "Pre-LOI", order: 6, category: "ACTIVE", colorHex: "#e8a33d" },
+  { name: "LOI Submitted", order: 7, category: "ACTIVE", colorHex: "#dc7a2e" },
+  { name: "LOI Accepted", order: 8, category: "ACTIVE", colorHex: "#c4553d" },
+  { name: "Closed Won", order: 9, category: "CLOSED_WON", colorHex: "#1e7a46", isTerminal: true },
+  { name: "Closed Lost", order: 10, category: "CLOSED_LOST", colorHex: "#8a8a82", isTerminal: true },
 ] as const;
 
 const VERTICALS = [
