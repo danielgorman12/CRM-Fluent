@@ -31,6 +31,7 @@ model User {
   valuationsUpdated  ValuationAnalysis[]
   activitiesLogged   SourcingActivity[]
   tripsPlanned       Trip[]
+  campaigns          Campaign[]
 }
 
 model Vertical {
@@ -107,6 +108,8 @@ model Prospect {
 
   stageHistory       ProspectStageHistory[]
   tripVisits         TripVisit[]
+  meetingNotes       MeetingNote[]
+  campaignRecipients CampaignRecipient[]
   scorecard          Scorecard?
   thesis             AcquisitionThesis?
   sellerRelationship SellerRelationship?
@@ -311,10 +314,97 @@ model SourcingActivity {
 
   createdAt DateTime @default(now())
 
-  tripVisit TripVisit?
+  tripVisit         TripVisit?
+  meetingNote       MeetingNote?
+  campaignRecipient CampaignRecipient?
 
   @@index([prospectId])
   @@index([activityDate])
+}
+
+// --- Meeting notes (Granola) ------------------------------------------------
+
+enum NoteSource {
+  GRANOLA
+  MANUAL
+}
+
+model MeetingNote {
+  id String @id @default(cuid())
+
+  prospectId String
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  source NoteSource @default(GRANOLA)
+  // Provider's meeting id. Unique so re-syncing updates rather than duplicates.
+  externalId String? @unique
+
+  title       String
+  meetingDate DateTime
+  attendees   String?
+  summary     String
+  actionItems String?
+
+  syncedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Set when this note has also been recorded as outreach activity.
+  loggedActivityId String?           @unique
+  loggedActivity   SourcingActivity? @relation(fields: [loggedActivityId], references: [id])
+
+  @@index([prospectId])
+}
+
+// --- Outreach campaigns ------------------------------------------------------
+
+enum CampaignStatus {
+  DRAFT
+  SENT
+}
+
+model Campaign {
+  id String @id @default(cuid())
+
+  name    String
+  subject String         @default("")
+  body    String         @default("")
+  status  CampaignStatus @default(DRAFT)
+
+  // What the recipient list was built from, shown for context on the campaign.
+  geographyNote String?
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  sentAt    DateTime?
+
+  recipients CampaignRecipient[]
+
+  @@index([createdById])
+}
+
+model CampaignRecipient {
+  id String @id @default(cuid())
+
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  prospectId String
+  prospect   Prospect @relation(fields: [prospectId], references: [id])
+
+  // Snapshot of the merged content at send time, so what went out is auditable
+  // even after the template is edited.
+  renderedSubject String?
+  renderedBody    String?
+  sentAt          DateTime?
+
+  loggedActivityId String?           @unique
+  loggedActivity   SourcingActivity? @relation(fields: [loggedActivityId], references: [id])
+
+  @@unique([campaignId, prospectId])
+  @@index([campaignId])
 }
 
 // --- Sourcing trips ---------------------------------------------------------

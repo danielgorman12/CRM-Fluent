@@ -15,6 +15,7 @@ export function ProspectTabsNav({ prospectId }: { prospectId: string }) {
     { href: `${base}/forecast`, label: "Forecast" },
     { href: `${base}/valuation`, label: "Valuation" },
     { href: `${base}/activity`, label: "Activity" },
+    { href: `${base}/notes`, label: "Notes" },
   ];
 
   return (
